@@ -1,6 +1,7 @@
-import type { SVGProps } from 'react'
+import type { FC, SVGProps } from 'react'
 
 import * as Checkbox from '@radix-ui/react-checkbox'
+import { useAutoAnimate } from '@formkit/auto-animate/react'
 
 import { api } from '@/utils/client/api'
 
@@ -62,32 +63,93 @@ import { api } from '@/utils/client/api'
  * Documentation references:
  *  - https://auto-animate.formkit.com
  */
+interface TodoListProps {
+  status: 'all' | 'pending' | 'completed'
+}
 
-export const TodoList = () => {
+export const TodoList: FC<TodoListProps> = ({ status }) => {
+  const [parent] = useAutoAnimate()
+
+  const apiContext = api.useContext()
+
   const { data: todos = [] } = api.todo.getAll.useQuery({
     statuses: ['completed', 'pending'],
   })
 
-  return (
-    <ul className="grid grid-cols-1 gap-y-3">
-      {todos.map((todo) => (
-        <li key={todo.id}>
-          <div className="flex items-center rounded-12 border border-gray-200 px-4 py-3 shadow-sm">
-            <Checkbox.Root
-              id={String(todo.id)}
-              className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700"
-            >
-              <Checkbox.Indicator>
-                <CheckIcon className="h-4 w-4 text-white" />
-              </Checkbox.Indicator>
-            </Checkbox.Root>
+  const { mutate: updateTodoStatus, isLoading: isUpdatingTodoStatus } =
+    api.todoStatus.update.useMutation({
+      onSuccess: () => {
+        apiContext.todo.getAll.refetch()
+      },
+    })
 
-            <label className="block pl-3 font-medium" htmlFor={String(todo.id)}>
-              {todo.body}
-            </label>
-          </div>
-        </li>
-      ))}
+  const { mutate: deleteTodo, isLoading: isDeletingTodo } =
+    api.todo.delete.useMutation({
+      onSuccess: () => {
+        apiContext.todo.getAll.refetch()
+      },
+    })
+
+  const filteredTodos = todos.filter((todo) => {
+    return todo.status === status || status === 'all'
+  })
+
+  return (
+    <ul className="grid grid-cols-1 gap-y-3" ref={parent}>
+      {filteredTodos.map((todo) => {
+        return (
+          <li key={todo.id}>
+            <div
+              className={
+                'flex items-center rounded-12 border border-gray-200 px-4 py-3 shadow-sm' +
+                (todo.status === 'completed' ? ' bg-[#F8FAFC] ' : '')
+              }
+            >
+              <Checkbox.Root
+                id={String(todo.id)}
+                className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700"
+                checked={todo.status === 'completed'}
+                disabled={isUpdatingTodoStatus}
+                onCheckedChange={(checked) => {
+                  updateTodoStatus({
+                    todoId: todo.id,
+                    status: checked ? 'completed' : 'pending',
+                  })
+                }}
+              >
+                <Checkbox.Indicator>
+                  <CheckIcon className="h-4 w-4 text-white" />
+                </Checkbox.Indicator>
+              </Checkbox.Root>
+
+              <label
+                className={
+                  'block pl-3 font-medium' +
+                  (todo.status === 'completed'
+                    ? ' text-[#64748B] line-through'
+                    : '')
+                }
+                htmlFor={String(todo.id)}
+              >
+                {todo.body}
+              </label>
+
+              <button
+                className="ml-auto flex min-w-[32px] flex-shrink-0 items-center justify-center rounded-[10px] p-[4px] hover:bg-gray-200"
+                aria-label="Remove todo"
+                onClick={() => {
+                  deleteTodo({
+                    id: todo.id,
+                  })
+                }}
+                disabled={isDeletingTodo}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </li>
+        )
+      })}
     </ul>
   )
 }

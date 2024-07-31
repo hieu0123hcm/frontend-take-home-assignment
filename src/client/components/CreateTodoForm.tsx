@@ -35,6 +35,17 @@ export const CreateTodoForm = () => {
       },
     })
 
+  //Implement the handleEnterPress function
+  const handleEnterPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      createTodo({
+        body: todoBody,
+      })
+      setTodoBody('')
+    }
+  }
+
   return (
     <form className="group flex items-center justify-between rounded-12 border border-gray-200 py-2 pr-4 focus-within:border-gray-400">
       <label htmlFor={TODO_INPUT_ID} className="sr-only">
@@ -49,6 +60,7 @@ export const CreateTodoForm = () => {
         onChange={(e) => {
           setTodoBody(e.target.value)
         }}
+        onKeyDown={handleEnterPress}
         className="flex-1 px-4 text-base placeholder:text-gray-400 focus:outline-none"
       />
 
@@ -61,8 +73,9 @@ export const CreateTodoForm = () => {
           })
           setTodoBody('')
         }}
+        className="min-w-[67px] flex-shrink-0 rounded-full bg-[#334155] px-[20px] py-[8px] text-[white]"
       >
-        Add
+        <p className="text-[14px] font-[700] leading-5">Add</p>
       </button>
     </form>
   )
